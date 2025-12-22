@@ -1,0 +1,36 @@
+# Dockerfile.gui
+# Full image for running the Web UI (builds Angular)
+
+# --- Stage 1: Build Angular UI ---
+FROM node:18-alpine AS ui-build
+WORKDIR /ui_build
+
+# Copy UI package files and install deps
+COPY ui/package*.json ./
+RUN npm install
+
+# Copy UI source and build
+COPY ui/ ./
+RUN npm run build -- --configuration development
+
+# --- Stage 2: Setup Server ---
+FROM node:18-alpine
+WORKDIR /app
+
+# Copy root package files and install deps
+COPY package*.json ./
+RUN npm install --production
+
+# Copy backend source
+COPY . .
+
+# Copy built UI from Stage 1
+# Note: Adjust destination loop if your index.js expects it elsewhere. 
+# Based on code: app.use(express.static(path.join(__dirname, 'ui/dist/ui/browser')));
+COPY --from=ui-build /ui_build/dist/ui/browser ./ui/dist/ui/browser
+
+# Expose UI port
+EXPOSE 4200
+
+# Start UI server
+ENTRYPOINT ["node", "index.js", "ui", "--port", "4200"]

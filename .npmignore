@@ -1,0 +1,37 @@
+# Logic/Logs
+traffic.jsonl
+ui-traffic.jsonl
+report.html
+*.log
+logs/
+tmp/
+.env
+
+# Dev Tools
+.eslintrc.json
+.prettierrc
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+ecosystem.config.js
+jest.config.js
+tests/
+coverage/
+
+# UI Source (we only ship ui/dist)
+ui/src/
+ui/node_modules/
+ui/package.json
+ui/package-lock.json
+ui/tsconfig.json
+ui/angular.json
+ui/README.md
+
+# System
+.git/
+.github/
+.vscode/
+node_modules/
+
+# Force include
+!ui/dist/

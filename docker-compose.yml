@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # 🖥️ CLI Service
+  # Usage: docker-compose run cli record ...
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    image: traffic-mirror-cli
+    volumes:
+      - .:/app
+    # Keep container alive to allow 'exec' if needed, or just run one-off commands
+    command: ["--help"] 
+
+  # 🎨 GUI Service
+  # Usage: docker-compose up gui
+  gui:
+    build:
+      context: .
+      dockerfile: Dockerfile.gui
+    image: traffic-mirror-gui
+    ports:
+      - "4200:4200"
+    volumes:
+      # Mount logs/reports so they persist on host
+      - ./ui-traffic.jsonl:/app/ui-traffic.jsonl
+      - ./report.html:/app/report.html
+      # Do NOT mount whole /app because it overlays the built UI in /app/ui/dist
+    environment:
+      - PORT=4200
