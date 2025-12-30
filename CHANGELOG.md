@@ -1,3 +1,9 @@
+## [1.1.2](https://github.com/xhani-manolis-trungu/traffic-mirror/compare/v1.1.1...v1.1.2) (2025-12-30)
+
+### Bug Fixes
+
+* **replayer:** prevent crash on non-json request bodies ([63d5d9b](https://github.com/xhani-manolis-trungu/traffic-mirror/commit/63d5d9b2ed717a1aa1e0b9cb03e0323cce8f58aa))
+
 ## [1.1.1](https://github.com/xhani-manolis-trungu/traffic-mirror/compare/v1.1.0...v1.1.1) (2025-12-30)
 
 ### Bug Fixes

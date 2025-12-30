@@ -1,6 +1,6 @@
 {
   "name": "http-log-replay",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Traffic Mirror is a regression testing tool that records HTTP traffic from a live environment and replays it against two different environments (e.g., Stable vs. Canary) to detect differences in responses.",
   "author": "Xhani Manolis Trungu",
   "main": "index.js",
