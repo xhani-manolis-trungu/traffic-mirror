@@ -43,11 +43,14 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.2.0",
     "pm2": "^6.0.14",
-    "prettier": "^3.7.4"
+    "prettier": "^3.7.4",
+    "semantic-release": "^21.1.2"
   },
   "repository": {
     "type": "git",
