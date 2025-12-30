@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { io } from 'socket.io-client';
 
+import { APP_VERSION } from '../version';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -12,6 +14,7 @@ import { io } from 'socket.io-client';
   styleUrl: './app.scss'
 })
 export class AppComponent implements OnInit {
+  version = APP_VERSION;
   private http = inject(HttpClient);
   private socket: any;
 
