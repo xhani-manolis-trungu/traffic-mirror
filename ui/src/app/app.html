@@ -1,0 +1,182 @@
+<div class="container">
+      <header>
+        <h1>🚦 Traffic Mirror <span class="badge">v1.0.0 UI</span></h1>
+        <div class="tabs">
+          <button [class.active]="mode() === 'record'" (click)="setMode('record')">
+            🔴 Record / Gen
+          </button>
+          <button [class.active]="mode() === 'replay'" (click)="setMode('replay')">
+            ▶️ Replay
+          </button>
+          <button [class.active]="mode() === 'report'" (click)="setMode('report')">
+            📄 Report
+          </button>
+        </div>
+      </header>
+
+      @if (mode() === 'record') {
+        <div class="panel">
+          <h3>Configuration</h3>
+          <div class="controls grid">
+            <label
+              >Target URL (Proxy Destination)
+              <input [(ngModel)]="recTarget" placeholder="http://localhost:8080" />
+            </label>
+            <label
+              >Recorder Port
+              <input [(ngModel)]="recPort" type="number" placeholder="3000" />
+            </label>
+          </div>
+
+          <div class="controls">
+             <label>HTTP Methods to Generate</label>
+             <div style="display: flex; gap: 15px;">
+               <label><input type="checkbox" [ngModel]="genMethods()['GET']" (ngModelChange)="genMethods()['GET'] = $event"> GET</label>
+               <label><input type="checkbox" [ngModel]="genMethods()['POST']" (ngModelChange)="genMethods()['POST'] = $event"> POST</label>
+               <label><input type="checkbox" [ngModel]="genMethods()['PUT']" (ngModelChange)="genMethods()['PUT'] = $event"> PUT</label>
+               <label><input type="checkbox" [ngModel]="genMethods()['DELETE']" (ngModelChange)="genMethods()['DELETE'] = $event"> DELETE</label>
+             </div>
+          </div>
+
+          <div class="controls">
+            <label style="display:flex; align-items:center; gap:10px;">
+              <span><strong>Mode:</strong></span>
+              <label><input type="radio" name="gmode" value="manual" [ngModel]="genMode()" (ngModelChange)="genMode.set($event)"> Manual</label>
+              <label><input type="radio" name="gmode" value="config" [ngModel]="genMode()" (ngModelChange)="genMode.set($event)"> YAML Config File</label>
+            </label>
+          </div>
+
+          @if (genMode() === 'manual') {
+            <div class="controls grid">
+              <label
+                >Swagger File Path (for Generation)
+                <input [(ngModel)]="genSwagger" placeholder="./full_documentation.json" />
+              </label>
+              <label
+                >Exclude Endpoints (Generate & Record)
+                <input [(ngModel)]="genExclude" placeholder="/logout, /health" />
+              </label>
+            </div>
+          } @else {
+            <div class="controls">
+              <label
+                >Configuration File Path
+                <input [(ngModel)]="genConfigPath" placeholder="config.yaml" />
+              </label>
+            </div>
+          }
+
+          <div class="actions">
+            @if (!isRecording()) {
+              <button class="btn-primary" (click)="startRecord()">Start Manually</button>
+              <button class="btn-warning" (click)="onGenerateTraffic()">
+                ⚡ Auto-Generate Traffic
+              </button>
+            } @else {
+              <button class="btn-danger full-width" (click)="stopRecord()">Stop Recording</button>
+            }
+          </div>
+
+          <div class="logs-window">
+            @for (log of liveLogs(); track log.timestamp) {
+              <div class="log-line">
+                <span class="method" [ngClass]="log.method">{{ log.method }}</span>
+                <span class="url">{{ log.url }}</span>
+              </div>
+            } @empty {
+              <div class="placeholder">Waiting for traffic...</div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (mode() === 'replay') {
+        <div class="panel">
+          <div class="controls grid">
+            <label
+              >Primary Env (Stable)
+              <input [(ngModel)]="repEnv1" placeholder="http://localhost:8080" />
+            </label>
+            <label
+              >Secondary Env (Test)
+              <input [(ngModel)]="repEnv2" placeholder="http://localhost:8081" />
+            </label>
+          </div>
+
+          <div class="controls grid">
+            <label
+              >Auth Header (Optional)
+              <input [(ngModel)]="repAuth" placeholder="Bearer eyJ..." />
+            </label>
+            <label
+              >Ignore JSON Fields
+              <input [(ngModel)]="repIgnore" placeholder="timestamp, id, _id" />
+            </label>
+          </div>
+
+          <div class="controls">
+            <label style="width:100%"
+              >Exclude Endpoints (Replay)
+              <input
+                [(ngModel)]="repExclude"
+                placeholder="/admin, /reset-password"
+                style="width:100%"
+              />
+            </label>
+          </div>
+
+          <button class="btn-primary full-width" (click)="startReplay()">
+            🚀 Replay & Compare
+          </button>
+
+          @if (replayProgress() > 0) {
+            <div class="progress-bar">
+              <div class="fill" [style.width.%]="replayProgress()"></div>
+            </div>
+            <p style="text-align: center; margin-top: 5px;">
+              {{ replayStats().current }} / {{ replayStats().total }} requests
+            </p>
+          }
+        </div>
+      }
+
+      @if (mode() === 'report') {
+        <div class="panel">
+          <div class="summary-box">
+            <div class="stat success">✅ Passed: {{ finalStats().passed }}</div>
+            <div class="stat fail">❌ Failed: {{ finalStats().failed }}</div>
+          </div>
+
+          @if (reportData().length === 0) {
+            <div class="placeholder" style="color: #7f8c8d; text-align: center; padding: 20px;">
+              No report data available. Run a Replay first.
+            </div>
+          }
+
+          @for (item of reportData(); track item.id) {
+            <details>
+              <summary [class.fail-card]="!item.match">Details
+                <span class="method" [ngClass]="item.method">{{ item.method }}</span>
+                <span class="url">{{ item.url }}</span>
+              </summary>
+
+              <div class="card" [class.fail-card]="!item.match">
+                <div class="card-header">
+                  <span class="method" [ngClass]="item.method">{{ item.method }}</span>
+                  <span class="url">{{ item.url }}</span>
+                  <span class="status-badge" [class.success]="item.match" [class.fail]="!item.match">
+                    {{ item.status1 }} vs {{ item.status2 }}
+                  </span>
+                </div>
+  
+                @if (!item.match && item.diff) {
+                  <div class="diff-view">
+                    <pre>@for (part of item.diff; track $index) {<span [class.added]="part.added" [class.removed]="part.removed">{{part.value}}</span>}</pre>
+                  </div>
+                }
+              </div>
+            </details>
+          }
+        </div>
+      }
+    </div>

@@ -50,9 +50,9 @@ The Web UI is the best way to get started. It guides you through the entire work
 
 ### 1. 🔴 Record / Generate
 
-- **Manual Mode**: Start the proxy, point your application/client to it, and use your app normally. Requests are saved to a file.
+- **Manual Mode**: Start the proxy, point your application/client to it, and select desired HTTP methods (e.g., GET, POST).
 - **Auto-Generate**: Upload an OpenAPI/Swagger JSON file to automatically generate realistic traffic patterns.
-- **YAML Config Mode**: Load a `config.yaml` file to pre-configure Traffic Generation (target, source, exclusions, timeouts).
+- **YAML Config Mode**: Load a `config.yaml` file to pre-configure Traffic Generation (target, source, exclusions, timeouts, methods).
 
 ### 2. ▶️ Replay
 

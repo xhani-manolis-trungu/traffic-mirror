@@ -68,6 +68,9 @@ program
   .command('generate')
   .description('Auto-generate traffic from Swagger file using a configuration file')
   .option('-c, --config <path>', 'Path to YAML configuration file', 'config.yaml')
+  .option('-m, --methods <items>', 'Comma separated list of HTTP methods', (val) =>
+    val.split(',')
+  )
   .action(async (options) => {
     try {
       console.log('🚀 Starting Traffic Generation...');
@@ -77,8 +80,13 @@ program
         console.log(`Loading configuration from ${options.config}...`);
         const raw = fs.readFileSync(options.config, 'utf8');
         config = yaml.load(raw);
+        
+        // Override methods if provided via CLI
+        if (options.methods && options.methods.length > 0) {
+           config.methods = options.methods;
+        }
       } else {
-        throw new Error(`Configuration file not found at ${options.config}`);
+         throw new Error(`Configuration file not found at ${options.config}`);
       }
 
       await generator.run(

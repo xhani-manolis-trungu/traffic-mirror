@@ -26,8 +26,12 @@ class TrafficGenerator {
       timeout = 5000,
       delay = 50,
       // retries = 3, // Not used yet in this simple loop
-      headers = {}
+      headers = {},
+      methods = ['GET'] // Default to GET only
     } = config;
+
+    // Normalize methods to upper case
+    const targetMethods = methods.map(m => m.toUpperCase());
 
     // --- STEP 1: Health Checks ---
     onProgress({ message: `🩺 Starting Pre-flight Health Checks...` });
@@ -77,53 +81,65 @@ class TrafficGenerator {
     }
 
     const paths = Object.keys(doc.paths);
-    const getEndpoints = paths.filter((p) => doc.paths[p].get);
+    
+    // Find all valid (path, method) pairs
+    const validOperations = []; // Array of { path, method }
+
+    paths.forEach(p => {
+      const pathItem = doc.paths[p];
+      Object.keys(pathItem).forEach(method => {
+        const upperMethod = method.toUpperCase();
+        if (targetMethods.includes(upperMethod)) {
+          validOperations.push({ path: p, method: upperMethod });
+        }
+      });
+    });
 
     onProgress({
-      message: `🔍 Found ${getEndpoints.length} GET endpoints. Applying filters...`,
+      message: `🔍 Found ${validOperations.length} operations matching [${targetMethods.join(', ')}]. Applying filters...`,
     });
 
     const rawExclude = Array.isArray(exclude) ? exclude : [exclude];
     const cleanExclude = rawExclude.map((e) => (e ? e.trim() : '')).filter((e) => e !== '');
 
-    const validEndpoints = getEndpoints.filter((endpoint) => {
-      if (cleanExclude.includes(endpoint)) return false;
+    const filteredOperations = validOperations.filter((op) => {
+      if (cleanExclude.includes(op.path)) return false;
       const isExcluded = cleanExclude.some((excludedItem) => {
-        return excludedItem.endsWith(endpoint) || endpoint.endsWith(excludedItem);
+        return excludedItem.endsWith(op.path) || op.path.endsWith(excludedItem);
       });
       if (isExcluded) return false;
       return true;
     });
 
     onProgress({
-      message: `⚡ Generating traffic for ${validEndpoints.length
-        } endpoints (Skipped ${getEndpoints.length - validEndpoints.length})`,
+      message: `⚡ Generating traffic for ${filteredOperations.length
+        } operations (Skipped ${validOperations.length - filteredOperations.length})`,
     });
 
     // Ensure we send traffic to the PROXY
     const cleanProxyUrl = proxyUrl.replace(/\/$/, '');
     let count = 0;
 
-    for (const endpoint of validEndpoints) {
+    for (const op of filteredOperations) {
       // Skip parameterized endpoints like /users/{id} for now as we can't guess IDs
-      if (endpoint.includes('{')) {
-        onProgress({ message: `⚠️ Skipping parameterized path: ${endpoint}` });
+      if (op.path.includes('{')) {
+        onProgress({ message: `⚠️ Skipping parameterized path: ${op.method} ${op.path}` });
         continue;
       }
 
-      const url = `${cleanProxyUrl}/api${endpoint}`;
-      console.log(`[Generator] Requesting: ${url}`);
+      const url = `${cleanProxyUrl}/api${op.path}`;
+      console.log(`[Generator] Requesting: ${op.method} ${url}`);
       count++;
 
       try {
-        await this.sendRequest(url, timeout, headers);
+        await this.sendRequest(op.method, url, timeout, headers);
         onProgress({
-          message: `[${count}/${validEndpoints.length}] 🚀 HIT: ${endpoint}`,
+          message: `[${count}/${filteredOperations.length}] 🚀 HIT: ${op.method} ${op.path}`,
         });
         // Small delay to prevent overwhelming the server
         await new Promise((r) => setTimeout(r, delay));
       } catch (err) {
-        onProgress({ message: `❌ FAIL: ${endpoint} - ${err.message}` });
+        onProgress({ message: `❌ FAIL: ${op.method} ${op.path} - ${err.message}` });
       }
     }
 
@@ -150,10 +166,16 @@ class TrafficGenerator {
     });
   }
 
-  sendRequest(url, timeout = 5000, headers = {}) {
+  sendRequest(method, url, timeout = 5000, headers = {}) {
     return new Promise((resolve, reject) => {
       const client = url.startsWith('https') ? https : http;
+      const urlObj = new URL(url);
+
       const requestOptions = {
+        method: method,
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname + urlObj.search,
         headers: {
           'User-Agent': 'Traffic-Mirror-Bot',
           ...headers
@@ -161,18 +183,20 @@ class TrafficGenerator {
         timeout: timeout
       };
 
-      const req = client.get(url, requestOptions, (res) => {
+      const req = client.request(requestOptions, (res) => {
         res.resume();
         resolve();
       });
 
       req.on('error', (e) => reject(e));
 
-      // Handle timeout event explicitly if needed, though req.setTimeout callback handles destruction
       req.on('timeout', () => {
         req.destroy();
         reject(new Error(`Request timed out after ${timeout}ms`));
       });
+
+      // End the request (important for non-GET methods if we aren't writing body)
+      req.end();
     });
   }
 }

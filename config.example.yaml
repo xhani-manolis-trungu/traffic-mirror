@@ -15,6 +15,13 @@ exclude:
   - '/api'
   - '/api/users'
 
+# List of HTTP methods to generate traffic for
+# Options: GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD
+# Default: [GET]
+methods:
+  - GET
+  - POST
+
 # Traffic Generation Settings
 timeout: 5000 # Request timeout in ms
 delay: 50 # Delay between requests in ms
@@ -22,5 +29,5 @@ retries: 3 # Number of retries for failed requests
 
 # Custom Headers to inject (e.g., Authorization)
 headers:
-  Authorization: 'Bearer your-bearer-token'
+  Authorization: 'Bearer your-token-here'
   X-Custom-Header: 'Traffic-Generator'

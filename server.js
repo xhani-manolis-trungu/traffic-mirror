@@ -104,22 +104,11 @@ function startServer(port = 4200) {
         const raw = fs.readFileSync(req.body.configPath, 'utf8');
         generatorConfig = yaml.load(raw);
         
-        // Override target/source if needed to ensure we point to the recorder?
-        // Actually, the user's config might point safely to the real target.
-        // But if we want to record, we might need to intercept.
-        // For now, let's assume the user config is "correct" for what they want to do.
-        // However, if we WANT to record, we should probably ensure the generator targets the recorder.
-        
-        // If we are recording, we might want to override the 'target' in the config to be the Recorder URL
-        // But the recorder is running on 'recTarget:recPort'.
-        // The generator needs to send requests to 'http://localhost:recPort'.
-        
-        // Let's force the generator target to hit our local Recorder if we started it.
-        // But if the user provided a config, they might expect it to follow that. 
-        // Given this is a specific UI flow "Generate & Record", we should override the target to be the proxy.
-        // generatorConfig.target = `http://localhost:${recPort}`;
-        // But wait, the proxy forwards to the REAL target.
-        
+        // Allow overriding methods from UI even if config file is loaded
+        if (req.body.methods && Array.isArray(req.body.methods) && req.body.methods.length > 0) {
+           generatorConfig.methods = req.body.methods;
+        }
+
       } else {
         // Legacy / Manual Mode construction
         generatorConfig = {
@@ -128,7 +117,8 @@ function startServer(port = 4200) {
           file: targetFile,
           exclude: targetExclude,
           delay: 50,
-          timeout: 5000
+          timeout: 5000,
+          methods: req.body.methods || ['GET'] // Add methods support
         };
       }
 
