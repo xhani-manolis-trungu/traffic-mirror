@@ -64,14 +64,22 @@ async function replayAndDiff(logFile, primaryUrl, secondaryUrl, reportFile, igno
       'User-Agent': 'Traffic-Replayer/1.0'
     };
 
-    const config = {
-      method: entry.method,
-      headers: headers,
-      data: entry.requestBody ? JSON.parse(entry.requestBody) : undefined,
-      validateStatus: () => true
-    };
-
     try {
+      const config = {
+        method: entry.method,
+        headers: headers,
+        validateStatus: () => true
+      };
+
+      if (entry.requestBody) {
+        try {
+           config.data = JSON.parse(entry.requestBody);
+        } catch (e) {
+           // If parsing fails, use raw body (maybe string / plain text)
+           config.data = entry.requestBody;
+        }
+      }
+
       const start1 = Date.now();
       const res1 = await axios({ ...config, url: `${primaryUrl}${endpoint}` });
       const time1 = Date.now() - start1;

@@ -11,7 +11,9 @@ jest.mock('readline', () => {
         createInterface: jest.fn().mockReturnValue({
             [Symbol.asyncIterator]: async function* () {
                 yield JSON.stringify({ method: 'GET', url: '/api/test', status: 200 });
+                yield JSON.stringify({ method: 'GET', url: '/api/test', status: 200 });
                 yield JSON.stringify({ method: 'POST', url: '/api/users', status: 201, requestBody: '{}' });
+                yield JSON.stringify({ method: 'POST', url: '/api/text', status: 200, requestBody: 'Plain text data' });
             }
         }),
     };
@@ -35,8 +37,8 @@ describe('Replayer', () => {
         const onEvent = jest.fn();
         await replayer(TEST_LOG, PRIMARY, SECONDARY, REPORT, [], {}, [], onEvent);
 
-        expect(axios).toHaveBeenCalledTimes(4); // 2 requests * 2 environments
-        expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'complete', passed: 2, failed: 0 }));
+        expect(axios).toHaveBeenCalledTimes(8); // 4 requests * 2 environments
+        expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'complete', passed: 4, failed: 0 }));
     });
 
     test('should detect mismatch', async () => {
@@ -51,6 +53,6 @@ describe('Replayer', () => {
         const onEvent = jest.fn();
         await replayer(TEST_LOG, PRIMARY, SECONDARY, REPORT, [], {}, [], onEvent);
 
-        expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'complete', passed: 1, failed: 1 }));
+        expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'complete', passed: 3, failed: 1 }));
     });
 });
