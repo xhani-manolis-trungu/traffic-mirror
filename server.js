@@ -9,6 +9,7 @@ const replayer = require('./replayer');
 const generator = require('./traffic-generator');
 const path = require('path');
 const fs = require('fs');
+const yaml = require('js-yaml');
 
 function startServer(port = 4200) {
   const app = express();
@@ -95,10 +96,46 @@ function startServer(port = 4200) {
       // Wait a moment for the server to bind the port
       await new Promise((r) => setTimeout(r, 500));
 
-      await generator.run(targetProxy, targetFile, targetExclude, (log) => {
+      let generatorConfig;
+
+      // New: Check for configPath
+      if (req.body.configPath && fs.existsSync(req.body.configPath)) {
+        console.log(`Loading configuration from ${req.body.configPath}...`);
+        const raw = fs.readFileSync(req.body.configPath, 'utf8');
+        generatorConfig = yaml.load(raw);
+        
+        // Override target/source if needed to ensure we point to the recorder?
+        // Actually, the user's config might point safely to the real target.
+        // But if we want to record, we might need to intercept.
+        // For now, let's assume the user config is "correct" for what they want to do.
+        // However, if we WANT to record, we should probably ensure the generator targets the recorder.
+        
+        // If we are recording, we might want to override the 'target' in the config to be the Recorder URL
+        // But the recorder is running on 'recTarget:recPort'.
+        // The generator needs to send requests to 'http://localhost:recPort'.
+        
+        // Let's force the generator target to hit our local Recorder if we started it.
+        // But if the user provided a config, they might expect it to follow that. 
+        // Given this is a specific UI flow "Generate & Record", we should override the target to be the proxy.
+        // generatorConfig.target = `http://localhost:${recPort}`;
+        // But wait, the proxy forwards to the REAL target.
+        
+      } else {
+        // Legacy / Manual Mode construction
+        generatorConfig = {
+          target: targetProxy,
+          source: recTarget,
+          file: targetFile,
+          exclude: targetExclude,
+          delay: 50,
+          timeout: 5000
+        };
+      }
+
+      await generator.run(generatorConfig, (log) => {
         // If the log is an object, emit it; if string, just log console
         if (typeof log === 'object' && log.message) {
-          // specific generator status updates
+           io.emit('record-log', log); // Emit to UI
         }
       });
 

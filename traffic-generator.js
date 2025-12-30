@@ -12,7 +12,23 @@ class TrafficGenerator {
    * 4. onProgress (the callback)
    * 5. sourceUrl (from options.source)
    */
-  async run(proxyUrl, swaggerPath, exclude = [], onProgress = () => { }, sourceUrl) {
+  /**
+   * Run traffic generation with the provided configuration.
+   * @param {Object} config - Configuration object
+   * @param {Function} onProgress - Callback for progress updates
+   */
+  async run(config, onProgress = () => { }) {
+    const {
+      target: proxyUrl,
+      file: swaggerPath,
+      source: sourceUrl,
+      exclude = [],
+      timeout = 5000,
+      delay = 50,
+      // retries = 3, // Not used yet in this simple loop
+      headers = {}
+    } = config;
+
     // --- STEP 1: Health Checks ---
     onProgress({ message: `🩺 Starting Pre-flight Health Checks...` });
 
@@ -100,12 +116,12 @@ class TrafficGenerator {
       count++;
 
       try {
-        await this.sendRequest(url);
+        await this.sendRequest(url, timeout, headers);
         onProgress({
           message: `[${count}/${validEndpoints.length}] 🚀 HIT: ${endpoint}`,
         });
         // Small delay to prevent overwhelming the server
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise((r) => setTimeout(r, delay));
       } catch (err) {
         onProgress({ message: `❌ FAIL: ${endpoint} - ${err.message}` });
       }
@@ -134,14 +150,29 @@ class TrafficGenerator {
     });
   }
 
-  sendRequest(url) {
+  sendRequest(url, timeout = 5000, headers = {}) {
     return new Promise((resolve, reject) => {
       const client = url.startsWith('https') ? https : http;
-      const req = client.get(url, { headers: { 'User-Agent': 'Traffic-Mirror-Bot' } }, (res) => {
+      const requestOptions = {
+        headers: {
+          'User-Agent': 'Traffic-Mirror-Bot',
+          ...headers
+        },
+        timeout: timeout
+      };
+
+      const req = client.get(url, requestOptions, (res) => {
         res.resume();
         resolve();
       });
+
       req.on('error', (e) => reject(e));
+
+      // Handle timeout event explicitly if needed, though req.setTimeout callback handles destruction
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`Request timed out after ${timeout}ms`));
+      });
     });
   }
 }

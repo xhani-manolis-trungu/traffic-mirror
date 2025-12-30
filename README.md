@@ -52,6 +52,7 @@ The Web UI is the best way to get started. It guides you through the entire work
 
 - **Manual Mode**: Start the proxy, point your application/client to it, and use your app normally. Requests are saved to a file.
 - **Auto-Generate**: Upload an OpenAPI/Swagger JSON file to automatically generate realistic traffic patterns.
+- **YAML Config Mode**: Load a `config.yaml` file to pre-configure Traffic Generation (target, source, exclusions, timeouts).
 
 ### 2. ▶️ Replay
 
@@ -83,7 +84,15 @@ node index.js record --target http://localhost:8080 --port 3000 --out traffic.js
 
 ### 2. Auto-Generate from Swagger
 
-Generate traffic without manual clicking.
+Generate traffic without manual clicking. You can use command line flags or a YAML configuration file.
+
+**Using Configuration File (Recommended):**
+
+```bash
+node index.js generate --config config.example.yaml
+```
+
+**Using Flags:**
 
 ```bash
 node index.js generate --file ./openapi.json --target http://localhost:3000

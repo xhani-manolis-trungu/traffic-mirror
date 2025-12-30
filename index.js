@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 const { Command } = require('commander');
+const fs = require('fs');
+const yaml = require('js-yaml');
 const recorder = require('./recorder');
 const replayAndDiff = require('./replayer');
 const startServer = require('./server');
@@ -64,26 +66,26 @@ program
 
 program
   .command('generate')
-  .description('Auto-generate traffic from Swagger file')
-  .option('-t, --target <url>', 'Proxy URL', 'http://localhost:3000')
-  .option('-f, --file <path>', 'Swagger file path', './full_documentation.json')
-  .option('-x, --exclude <items>', 'Comma separated list of endpoints to exclude', (val) =>
-    val.split(',')
-  ) // <--- NEW OPTION
-  .option('-s, --source <url>', 'Source Server URL', 'http://localhost:1338')
+  .description('Auto-generate traffic from Swagger file using a configuration file')
+  .option('-c, --config <path>', 'Path to YAML configuration file', 'config.yaml')
   .action(async (options) => {
     try {
       console.log('🚀 Starting Traffic Generation...');
 
-      // Pass options.exclude (or empty array) as 3rd arg
+      let config = {};
+      if (options.config && fs.existsSync(options.config)) {
+        console.log(`Loading configuration from ${options.config}...`);
+        const raw = fs.readFileSync(options.config, 'utf8');
+        config = yaml.load(raw);
+      } else {
+        throw new Error(`Configuration file not found at ${options.config}`);
+      }
+
       await generator.run(
-        options.target,
-        options.file,
-        options.exclude || [],
+        config,
         (log) => {
           console.log(log.message);
-        },
-        options.source
+        }
       );
 
       console.log('✅ Done.');

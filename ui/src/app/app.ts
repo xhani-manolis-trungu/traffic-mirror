@@ -39,16 +39,33 @@ import { io } from 'socket.io-client';
             </label>
           </div>
 
-          <div class="controls grid">
-            <label
-              >Swagger File Path (for Generation)
-              <input [(ngModel)]="genSwagger" placeholder="./full_documentation.json" />
-            </label>
-            <label
-              >Exclude Endpoints (Generate & Record)
-              <input [(ngModel)]="genExclude" placeholder="/logout, /health" />
+          <div class="controls">
+            <label style="display:flex; align-items:center; gap:10px;">
+              <span><strong>Mode:</strong></span>
+              <label><input type="radio" name="gmode" value="manual" [ngModel]="genMode()" (ngModelChange)="genMode.set($event)"> Manual</label>
+              <label><input type="radio" name="gmode" value="config" [ngModel]="genMode()" (ngModelChange)="genMode.set($event)"> YAML Config File</label>
             </label>
           </div>
+
+          @if (genMode() === 'manual') {
+            <div class="controls grid">
+              <label
+                >Swagger File Path (for Generation)
+                <input [(ngModel)]="genSwagger" placeholder="./full_documentation.json" />
+              </label>
+              <label
+                >Exclude Endpoints (Generate & Record)
+                <input [(ngModel)]="genExclude" placeholder="/logout, /health" />
+              </label>
+            </div>
+          } @else {
+            <div class="controls">
+              <label
+                >Configuration File Path
+                <input [(ngModel)]="genConfigPath" placeholder="config.yaml" />
+              </label>
+            </div>
+          }
 
           <div class="actions">
             @if (!isRecording()) {
@@ -415,6 +432,11 @@ export class AppComponent implements OnInit {
   isRecording = signal(false);
   recTarget = signal('http://localhost:8080');
   recPort = signal(3000);
+  
+  // Generation Config Mode
+  genMode = signal<'manual' | 'config'>('manual');
+  genConfigPath = signal('config.yaml');
+
   genSwagger = signal('./full_documentation.json');
   genExclude = signal(''); // Comma sep string
   liveLogs = signal<any[]>([]);
@@ -489,20 +511,33 @@ export class AppComponent implements OnInit {
   }
 
   onGenerateTraffic() {
-    // Splits "path1, path2" into ["path1", "path2"]
-    const excludeList = this.genExclude()
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s);
+    let payload: any = {
+      port: this.recPort(),
+    };
+
+    if (this.genMode() === 'config') {
+      payload.configPath = this.genConfigPath();
+      // Even if using config file, we still might need proxyUrl/target 
+      // if the server refuses to run without them, but our server code handles configPath first.
+      // However, for REPLAY recording to work, we need to know where the proxy is.
+      // The server auto-starts recorder on recPort -> recTarget.
+      // If using config file, user should probably ensure config file points to proxy.
+       payload.target = this.recTarget(); // Still pass this for Recorder start
+    } else {
+      // Splits "path1, path2" into ["path1", "path2"]
+      const excludeList = this.genExclude()
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s);
+
+      payload.proxyUrl = `http://localhost:${this.recPort()}`;
+      payload.target = this.recTarget();
+      payload.swaggerFile = this.genSwagger();
+      payload.exclude = excludeList;
+    }
 
     this.http
-      .post('http://localhost:4200/api/generate', {
-        proxyUrl: `http://localhost:${this.recPort()}`, // Dynamic Proxy URL based on port
-        target: this.recTarget(), // <--- NEW: Send the real target (e.g. localhost:8080)
-        port: this.recPort(), // <--- NEW: Send the port to listen on
-        swaggerFile: this.genSwagger(),
-        exclude: excludeList,
-      })
+      .post('http://localhost:4200/api/generate', payload)
       .subscribe();
   }
 
