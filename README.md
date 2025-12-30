@@ -203,6 +203,24 @@ npm run format
 npm run start:pm2
 ```
 
+### 5. Contribution Guidelines
+
+We use **Semantic Release** to automate version management and package publishing. To ensure this works correctly, please follow the **Conventional Commits** specification for your commit messages.
+
+**Commit Message Format:**
+
+```
+<type>(<scope>): <subject>
+```
+
+**Common Types:**
+
+- **`feat`**: A new feature (triggers a **MINOR** release).
+- **`fix`**: A bug fix (triggers a **PATCH** release).
+- **`docs`**: Documentation only changes (triggers a **PATCH** release).
+- **`refactor`**: A code change that neither fixes a bug nor adds a feature (triggers a **PATCH** release).
+- **`perf`**, **`test`**, **`ci`**, **`chore`**: Changes that do not trigger a release (unless configured otherwise).
+
 ---
 
 ## 📦 Maintenance
